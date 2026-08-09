@@ -1,5 +1,25 @@
 # GitHub Setup and Push Guide
 
+## TL;DR
+
+```bash
+cd /workspaces/codespaces-blank
+env -u GITHUB_TOKEN gh auth login --hostname github.com --web
+gh auth setup-git --hostname github.com
+git remote set-url origin https://github.com/valdronus/tradeskillArbitrage.git
+git add Documentation/AuctioneerInfo.md Documentation/AuctioneerStatisticMethods.md Documentation/NewStatModulePlan.md Documentation/GitHubSetup.md
+git commit -m 'Add Auctioneer documentation and setup guide'
+git push origin main
+```
+
+If the push fails with a 403, try again with:
+
+```bash
+env -u GITHUB_TOKEN git push origin main
+```
+
+This works 90% of the time in a fresh session because it avoids using an invalid `GITHUB_TOKEN` environment override.
+
 This guide explains the exact commands used to authenticate, configure git, and push local changes to `https://github.com/valdronus/tradeskillArbitrage`.
 
 > Do not paste any secret values into shared files. Use tokens only when prompted.
@@ -144,4 +164,5 @@ git log --oneline --decorate --graph --all | head
 
 - `gh auth login` can be sensitive to stale environment variables. Use `env -u GITHUB_TOKEN` to clear `GITHUB_TOKEN` during login.
 - Use only one authentication source at a time: either `gh` stored credentials or a PAT in your shell.
+- If `git push` fails with `403`, retry with `env -u GITHUB_TOKEN git push origin main` because an invalid `GITHUB_TOKEN` environment variable can override the working `gh` credential helper.
 - The `Documentation/GitHubSetup.md` file itself should not contain any token or secret values.
