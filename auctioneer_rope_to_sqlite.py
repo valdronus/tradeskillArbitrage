@@ -28,6 +28,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple, TypedDict, Union
 
 from slpp import slpp
 
+
 class ParsedItemObject(TypedDict, total=False):
     """Parsed Auctioneer item link fields from a WoW item string."""
 
@@ -58,6 +59,7 @@ class ParsedItemObject(TypedDict, total=False):
     # Extra data
     item_name: Optional[str]
 
+
 LuaValue = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
 ItemObject = ParsedItemObject
 
@@ -65,33 +67,33 @@ ITEM_LINK_RGX = re.compile(r"\|Hitem:([^|]+)\|h")
 ITEM_NAME_RGX = re.compile(r"\[([^\]]+)\]")
 
 SCAN_FIELD_NAMES = [
-    "id",         # 1: internal auction row id
-    "link",       # 2: item hyperlink string
-    "useLevel",   # 3: required/use level for the item
+    "id",  # 1: internal auction row id
+    "link",  # 2: item hyperlink string
+    "useLevel",  # 3: required/use level for the item
     "itemLevel",  # 4: item level
-    "itemType",   # 5: item class/type code
-    "subType",    # 6: item subclass code
-    "equipPos",   # 7: equipment slot code
-    "price",      # 8: next bid / Auctioneer price
-    "timeLeft",   # 9: remaining auction time bucket
-    "seenTime",   # 10: scan timestamp
-    "itemName",   # 11: display name
-    "texture",    # 12: icon/texture identifier
+    "itemType",  # 5: item class/type code
+    "subType",  # 6: item subclass code
+    "equipPos",  # 7: equipment slot code
+    "price",  # 8: next bid / Auctioneer price
+    "timeLeft",  # 9: remaining auction time bucket
+    "seenTime",  # 10: scan timestamp
+    "itemName",  # 11: display name
+    "texture",  # 12: icon/texture identifier
     "stackSize",  # 13: quantity in stack
-    "quality",    # 14: item quality
-    "canUse",     # 15: whether player can use item
-    "minBid",     # 16: minimum bid
-    "curBid",     # 17: current bid amount
+    "quality",  # 14: item quality
+    "canUse",  # 15: whether player can use item
+    "minBid",  # 16: minimum bid
+    "curBid",  # 17: current bid amount
     "increment",  # 18: bid increment
-    "sellerName", # 19: seller character name
-    "buyoutPrice",# 20: buyout price
-    "amBidder",   # 21: is player current high bidder
-    "dataFlag",   # 22: internal Auctioneer data flag
-    "itemId",     # 23: WoW item ID
-    "itemSuffix", # 24: random suffix code
-    "itemFactor", # 25: random factor code
-    "itemEnchant",# 26: enchantment ID
-    "itemSeed",   # 27: random seed from item link
+    "sellerName",  # 19: seller character name
+    "buyoutPrice",  # 20: buyout price
+    "amBidder",  # 21: is player current high bidder
+    "dataFlag",  # 22: internal Auctioneer data flag
+    "itemId",  # 23: WoW item ID
+    "itemSuffix",  # 24: random suffix code
+    "itemFactor",  # 25: random factor code
+    "itemEnchant",  # 26: enchantment ID
+    "itemSeed",  # 27: random seed from item link
 ]
 
 
@@ -128,7 +130,9 @@ def bool_or_none(value: Any) -> Optional[bool]:
     return None
 
 
-def get_scan_field(row: Union[Dict[Any, Any], List[Any]], position: int) -> Any:
+def get_scan_field(
+    row: Union[Dict[Any, Any], List[Any]], position: int
+) -> Any:
     if isinstance(row, dict):
         if position in row:
             return row[position]
@@ -140,6 +144,7 @@ def get_scan_field(row: Union[Dict[Any, Any], List[Any]], position: int) -> Any:
         if 0 <= idx < len(row):
             return row[idx]
     return None
+
 
 FIELD_CASTS = {
     "id": int_or_none,
@@ -188,20 +193,26 @@ class AucScanEntry:
     itemType: Optional[int] = None  # item class/type code
     subType: Optional[int] = None  # item subclass code
     equipPos: Optional[int] = None  # equipment slot code
-    price: Optional[int] = None  # next bid or current bid price used by Auctioneer
+    price: Optional[int] = (
+        None  # next bid or current bid price used by Auctioneer
+    )
     timeLeft: Optional[int] = None  # auction time left bucket (1-4)
     seenTime: Optional[int] = None  # scan timestamp
     itemName: Optional[str] = None  # 11: item display name
     texture: Optional[str] = None  # 12: icon/texture identifier or path
     stackSize: Optional[int] = None  # 13: number of items in stack
-    quality: Optional[int] = None  # 14: item quality (0=poor,1=common,2=uncommon,3=rare,4=epic)
+    quality: Optional[int] = (
+        None  # 14: item quality (0=poor,1=common,2=uncommon,3=rare,4=epic)
+    )
     canUse: Optional[bool] = None  # 15: whether the player can use this item
     minBid: Optional[int] = None  # 16: minimum bid
     curBid: Optional[int] = None  # 17: current high bid
     increment: Optional[int] = None  # 18: minimum bid increment
     sellerName: Optional[str] = None  # 19: seller character name
     buyoutPrice: Optional[int] = None  # 20: buyout price
-    amBidder: Optional[bool] = None  # 21: whether the player is the current high bidder
+    amBidder: Optional[bool] = (
+        None  # 21: whether the player is the current high bidder
+    )
     dataFlag: Optional[int] = None  # 22: internal Auctioneer data flag
     itemId: Optional[int] = None  # 23: actual WoW item ID
     itemSuffix: Optional[int] = None  # 24: item random suffix
@@ -210,7 +221,13 @@ class AucScanEntry:
     itemSeed: Optional[int] = None  # 27: item random seed from the link
 
     @classmethod
-    def from_row(cls, row: Union[Dict[Any, Any], List[Any]], server: Optional[str] = None, faction: Optional[str] = None, rope_id: Optional[int] = None) -> "AucScanEntry":
+    def from_row(
+        cls,
+        row: Union[Dict[Any, Any], List[Any]],
+        server: Optional[str] = None,
+        faction: Optional[str] = None,
+        rope_id: Optional[int] = None,
+    ) -> "AucScanEntry":
         values = {
             name: cast_scan_value(name, get_scan_field(row, idx + 1))
             for idx, name in enumerate(SCAN_FIELD_NAMES)
@@ -286,7 +303,7 @@ def parse_item_string(value: str) -> Optional[ItemObject]:
         raw = link_match.group(1)
 
     if raw.startswith("item:"):
-        raw = raw[len("item:"):]
+        raw = raw[len("item:") :]
 
     # Item link token positions, as seen in Auctioneer / WoW item links:
     # 1: item_id
@@ -343,7 +360,10 @@ def parse_item_string(value: str) -> Optional[ItemObject]:
         bonus_ids: List[int] = []
         offset = 12
         for idx in range(num_bonus):
-            if offset + idx < len(numbers) and numbers[offset + idx] is not None:
+            if (
+                offset + idx < len(numbers)
+                and numbers[offset + idx] is not None
+            ):
                 bonus_ids.append(numbers[offset + idx])
         item["bonus_ids"] = bonus_ids
         tail_index = offset + num_bonus
@@ -359,7 +379,9 @@ def parse_item_string(value: str) -> Optional[ItemObject]:
     return item
 
 
-def flatten_lua_table(value: LuaValue, prefix: str = "") -> List[Tuple[str, LuaValue]]:
+def flatten_lua_table(
+    value: LuaValue, prefix: str = ""
+) -> List[Tuple[str, LuaValue]]:
     rows: List[Tuple[str, LuaValue]] = []
     if isinstance(value, dict):
         for key, item in value.items():
@@ -384,7 +406,9 @@ def decode_auctioneer_rope(rope: str) -> Optional[Dict[str, Any]]:
     if not rope or not isinstance(rope, str):
         return None
 
-    alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-"
+    alphabet = (
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-"
+    )
     if any(ch not in alphabet for ch in rope):
         return None
 
@@ -428,7 +452,9 @@ def create_database(path: str) -> sqlite3.Connection:
     return conn
 
 
-def insert_rows(conn: sqlite3.Connection, rows: Iterable[Tuple[str, str, Optional[str]]]) -> None:
+def insert_rows(
+    conn: sqlite3.Connection, rows: Iterable[Tuple[str, str, Optional[str]]]
+) -> None:
     cursor = conn.cursor()
     cursor.executemany(
         "INSERT INTO auctioneer_rope (entry_key, raw_rope, decoded_json) VALUES (?, ?, ?)",
@@ -437,7 +463,9 @@ def insert_rows(conn: sqlite3.Connection, rows: Iterable[Tuple[str, str, Optiona
     conn.commit()
 
 
-def insert_item_rows(conn: sqlite3.Connection, rows: Iterable[Tuple[Any, ...]]) -> None:
+def insert_item_rows(
+    conn: sqlite3.Connection, rows: Iterable[Tuple[Any, ...]]
+) -> None:
     cursor = conn.cursor()
     cursor.executemany(
         "INSERT INTO auctioneer_item (entry_key, raw_value, item_link, item_id, enchant_id, gem1_id, gem2_id, gem3_id, suffix_id, unique_id, level, specialization_id, upgrade_type, instance_difficulty, num_bonus_ids, bonus_ids, upgrade_value, item_name, parsed_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -446,7 +474,9 @@ def insert_item_rows(conn: sqlite3.Connection, rows: Iterable[Tuple[Any, ...]]) 
     conn.commit()
 
 
-def insert_listing_rows(conn: sqlite3.Connection, rows: Iterable[Tuple[Any, ...]]) -> None:
+def insert_listing_rows(
+    conn: sqlite3.Connection, rows: Iterable[Tuple[Any, ...]]
+) -> None:
     cursor = conn.cursor()
     cursor.executemany(
         "INSERT INTO auctionListings (server, faction, ropeId, itemLevel, category, subcategory, armorCategory, currentBid, unknownField7, timestamp, name, quantity, rarity, requiredLevel, originalBid, buyPrice, username, unknownField22, itemId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -480,14 +510,22 @@ def parse_input_file(path: str) -> LuaValue:
         return stripped
 
 
-def build_rows(parsed: LuaValue) -> Tuple[List[Tuple[str, str, Optional[str]]], List[Tuple[Any, ...]], List[Tuple[Any, ...]]]:
+def build_rows(
+    parsed: LuaValue,
+) -> Tuple[
+    List[Tuple[str, str, Optional[str]]],
+    List[Tuple[Any, ...]],
+    List[Tuple[Any, ...]],
+]:
     rope_rows: List[Tuple[str, str, Optional[str]]] = []
     item_rows: List[Tuple[Any, ...]] = []
     listing_rows: List[Tuple[Any, ...]] = []
 
     def add_string_row(key: str, value: str) -> None:
         decoded = decode_auctioneer_rope(value)
-        rope_rows.append((key, value, json.dumps(decoded) if decoded is not None else None))
+        rope_rows.append(
+            (key, value, json.dumps(decoded) if decoded is not None else None)
+        )
         item = parse_item_string(value)
         if item is not None:
             item_rows.append(
@@ -514,7 +552,12 @@ def build_rows(parsed: LuaValue) -> Tuple[List[Tuple[str, str, Optional[str]]], 
                 )
             )
 
-    def add_listing_row(server: Optional[str], faction: Optional[str], rope_id: Optional[int], row: Union[Dict[Any, Any], List[Any]]) -> None:
+    def add_listing_row(
+        server: Optional[str],
+        faction: Optional[str],
+        rope_id: Optional[int],
+        row: Union[Dict[Any, Any], List[Any]],
+    ) -> None:
         entry = AucScanEntry.from_row(row, server, faction, rope_id)
         listing_rows.append(entry.as_tuple())
 
@@ -533,18 +576,31 @@ def build_rows(parsed: LuaValue) -> Tuple[List[Tuple[str, str, Optional[str]]], 
 
     # Extract scan row dictionaries if present
     if isinstance(parsed, dict):
-        server = parsed.get("server") if isinstance(parsed.get("server"), str) else None
-        faction = parsed.get("faction") if isinstance(parsed.get("faction"), str) else None
+        server = (
+            parsed.get("server")
+            if isinstance(parsed.get("server"), str)
+            else None
+        )
+        faction = (
+            parsed.get("faction")
+            if isinstance(parsed.get("faction"), str)
+            else None
+        )
         rope_id = None
         if isinstance(parsed.get("ropeId"), int):
             rope_id = parsed.get("ropeId")
-        elif isinstance(parsed.get("ropeId"), str) and parsed.get("ropeId").isdigit():
+        elif (
+            isinstance(parsed.get("ropeId"), str)
+            and parsed.get("ropeId").isdigit()
+        ):
             rope_id = int(parsed.get("ropeId"))
 
         for key, value in parsed.items():
             if key in {"server", "faction", "ropeId"}:
                 continue
-            if isinstance(value, dict) and all(str(k).isdigit() for k in value.keys()):
+            if isinstance(value, dict) and all(
+                str(k).isdigit() for k in value.keys()
+            ):
                 add_listing_row(server, faction, rope_id, value)
             elif isinstance(value, list):
                 for item in value:
@@ -555,9 +611,15 @@ def build_rows(parsed: LuaValue) -> Tuple[List[Tuple[str, str, Optional[str]]], 
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Convert Auctioneer Lua rope data into SQLite")
-    parser.add_argument("--input", required=True, help="Lua file or raw rope input file")
-    parser.add_argument("--output", required=True, help="SQLite database path to write")
+    parser = argparse.ArgumentParser(
+        description="Convert Auctioneer Lua rope data into SQLite"
+    )
+    parser.add_argument(
+        "--input", required=True, help="Lua file or raw rope input file"
+    )
+    parser.add_argument(
+        "--output", required=True, help="SQLite database path to write"
+    )
     return parser.parse_args()
 
 

@@ -50,16 +50,15 @@ Example usage:
 
 from __future__ import annotations
 
+# pylint: disable=missing-docstring
 import argparse
 import csv
-import json
 import logging
-import os
 import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from slpp import slpp
 
@@ -106,13 +105,21 @@ DEFAULT_WOW_SAVEDVARS_ROOTS = [
     Path.home() / "World of Warcraft",
     Path.home() / "Games" / "World of Warcraft",
     Path.home() / ".wine" / "drive_c" / "Program Files" / "World of Warcraft",
-    Path.home() / ".wine" / "drive_c" / "Program Files (x86)" / "World of Warcraft",
+    Path.home()
+    / ".wine"
+    / "drive_c"
+    / "Program Files (x86)"
+    / "World of Warcraft",
 ]
-DEFAULT_ALTOHOLIC_FILES = ["DataStore_Inventory.lua", "DataStore_Containers.lua", "DataStore_Characters.lua"]
+DEFAULT_ALTOHOLIC_FILES = [
+    "DataStore_Inventory.lua",
+    "DataStore_Containers.lua",
+    "DataStore_Characters.lua",
+]
 DEFAULT_AUCTIONEER_FILES = ["AucScanData.lua", "Auc-ScanData.lua"]
 
 
-@dataclass
+@dataclass  # pylint: disable=too-many-instance-attributes
 class AltoItemRecord:
     source_path: str
     item_link: Optional[str]
@@ -124,7 +131,7 @@ class AltoItemRecord:
     notes: List[str] = field(default_factory=list)
 
 
-@dataclass
+@dataclass  # pylint: disable=too-many-instance-attributes
 class AuctioneerScanRow:
     server: Optional[str]
     faction: Optional[str]
@@ -138,7 +145,7 @@ class AuctioneerScanRow:
     seen_time: Optional[int] = None
 
 
-@dataclass
+@dataclass  # pylint: disable=too-many-instance-attributes
 class RecommendationRow:
     item_id: Optional[int]
     item_name: Optional[str]
@@ -166,7 +173,9 @@ def setup_logger(log_path: Path) -> logging.Logger:
 
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(logging.Formatter("%(levelname)s: %(message)s"))
+    console_handler.setFormatter(
+        logging.Formatter("%(levelname)s: %(message)s")
+    )
 
     logger.handlers = []
     logger.addHandler(file_handler)
@@ -174,35 +183,28 @@ def setup_logger(log_path: Path) -> logging.Logger:
     return logger
 
 
-def normalize_lua_text(text: str) -> str:
-    cleaned = text.strip()
-    if cleaned.startswith("return"):
-        cleaned = cleaned[len("return") :].strip()
-    cleaned = strip_lua_comments(cleaned)
-    return cleaned
-
-
-def strip_lua_comments(text: str) -> str:
-    text = re.sub(r"--\[\[.*?\]\]", "", text, flags=re.DOTALL)
-    text = re.sub(r"--[^\n]*", "", text)
-    return text
-
-
 def parse_lua_file(path: Path, logger: logging.Logger) -> LuaValue:
     logger.debug("Parsing Lua file: %s", path)
     text = path.read_text(encoding="utf-8", errors="ignore")
     if not text.strip():
         raise ValueError(f"Lua file is empty: {path}")
+    text = text.strip()
+    if text.startswith("return"):
+        text = text[len("return") :].strip()
     try:
-        parsed = slpp.decode(normalize_lua_text(text))
+        parsed = slpp.decode(text)
         logger.debug("Parsed Lua object type: %s", type(parsed).__name__)
         return parsed
     except Exception as exc:
         logger.exception("Failed to parse Lua file %s", path)
-        raise RuntimeError(f"Could not parse Lua file '{path}': {exc}") from exc
+        raise RuntimeError(
+            f"Could not parse Lua file '{path}': {exc}"
+        ) from exc
 
 
-def parse_item_link(value: str) -> Tuple[Optional[str], Optional[int], Optional[str]]:
+def parse_item_link(
+    value: str,
+) -> Tuple[Optional[str], Optional[int], Optional[str]]:
     link = None
     item_id = None
     item_name = None
@@ -217,16 +219,34 @@ def parse_item_link(value: str) -> Tuple[Optional[str], Optional[int], Optional[
         item_name_match = ITEM_NAME_RGX.search(value)
         if item_name_match:
             item_name = item_name_match.group(1)
-        try:
-            tokens = link.split(":")
-            if tokens and tokens[0] == "item" and tokens[1].isdigit():
+        tokens = link.split(":")
+        if tokens and tokens[0] == "item" and len(tokens) > 1:
+            try:
                 item_id = int(tokens[1])
-        except Exception:
-            pass
+            except ValueError:
+                pass
     return link, item_id, item_name
 
 
-def load_lua_inputs(paths: Sequence[Path], logger: logging.Logger) -> List[Tuple[Path, LuaValue]]:
+def get_parent_count(parent: Optional[Dict[str, Any]]) -> int:
+    if not isinstance(parent, dict):
+        return 1
+    for count_key in (
+        "count",
+        "quantity",
+        "stack",
+        "stackSize",
+        "qty",
+    ):
+        candidate = parent.get(count_key)
+        if isinstance(candidate, (int, float)) and candidate > 0:
+            return int(candidate)
+    return 1
+
+
+def load_lua_inputs(
+    paths: Sequence[Path], logger: logging.Logger
+) -> List[Tuple[Path, LuaValue]]:
     loaded = []
     for path in paths:
         if not path.exists():
@@ -261,11 +281,7 @@ def collect_item_links(
             item_link, item_id, item_name = parse_item_link(value)
             count = 1
             if isinstance(parent, dict):
-                for count_key in ("count", "quantity", "stack", "stackSize", "qty"):
-                    candidate = parent.get(count_key)
-                    if isinstance(candidate, (int, float)) and candidate > 0:
-                        count = int(candidate)
-                        break
+                count = get_parent_count(parent)
             results.append(
                 AltoItemRecord(
                     source_path=source_path,
@@ -280,15 +296,25 @@ def collect_item_links(
     elif isinstance(value, dict):
         for key, nested in value.items():
             child_path = f"{path}.{key}" if path else str(key)
-            results.extend(collect_item_links(nested, source_path, logger, child_path, value))
+            results.extend(
+                collect_item_links(
+                    nested, source_path, logger, child_path, value
+                )
+            )
     elif isinstance(value, list):
         for index, nested in enumerate(value, start=1):
             child_path = f"{path}[{index}]" if path else f"[{index}]"
-            results.extend(collect_item_links(nested, source_path, logger, child_path, parent))
+            results.extend(
+                collect_item_links(
+                    nested, source_path, logger, child_path, parent
+                )
+            )
     return results
 
 
-def extract_altoholic_items(parsed_inputs: Sequence[Tuple[Path, LuaValue]], logger: logging.Logger) -> List[AltoItemRecord]:
+def extract_altoholic_items(
+    parsed_inputs: Sequence[Tuple[Path, LuaValue]], logger: logging.Logger
+) -> List[AltoItemRecord]:
     items: List[AltoItemRecord] = []
     for path, parsed in parsed_inputs:
         logger.info("Scanning Altoholic input: %s", path)
@@ -297,39 +323,20 @@ def extract_altoholic_items(parsed_inputs: Sequence[Tuple[Path, LuaValue]], logg
     return items
 
 
-def flatten_table(value: LuaValue, parent_key: str = "") -> List[Tuple[str, LuaValue]]:
-    rows: List[Tuple[str, LuaValue]] = []
-    if isinstance(value, dict):
-        for key, nested in value.items():
-            key_name = f"{parent_key}.{key}" if parent_key else str(key)
-            if isinstance(nested, (dict, list)):
-                rows.extend(flatten_table(nested, key_name))
-            else:
-                rows.append((key_name, nested))
-    elif isinstance(value, list):
-        for index, nested in enumerate(value, start=1):
-            key_name = f"{parent_key}[{index}]" if parent_key else f"[{index}]"
-            if isinstance(nested, (dict, list)):
-                rows.extend(flatten_table(nested, key_name))
-            else:
-                rows.append((key_name, nested))
-    else:
-        rows.append((parent_key or "value", value))
-    return rows
-
-
-def get_scan_field(row: Union[Dict[Any, Any], List[Any]], position: int) -> Any:
+def row_to_indexed_dict(
+    row: Union[Dict[Any, Any], List[Any]],
+) -> Dict[int, Any]:
     if isinstance(row, dict):
-        if position in row:
-            return row[position]
-        if str(position) in row:
-            return row[str(position)]
-        return row.get(str(position), row.get(position))
+        mapped: Dict[int, Any] = {}
+        for key, value in row.items():
+            if isinstance(key, int):
+                mapped[key] = value
+            elif isinstance(key, str) and key.isdigit():
+                mapped[int(key)] = value
+        return mapped
     if isinstance(row, list):
-        idx = position - 1
-        if 0 <= idx < len(row):
-            return row[idx]
-    return None
+        return {index + 1: value for index, value in enumerate(row)}
+    return {}
 
 
 def parse_scan_row(
@@ -338,9 +345,11 @@ def parse_scan_row(
     faction: Optional[str],
     rope_id: Optional[int],
 ) -> AuctioneerScanRow:
-    parsed: Dict[str, Any] = {}
-    for index, name in enumerate(SCAN_FIELD_NAMES, start=1):
-        parsed[name] = get_scan_field(row, index)
+    row_values = row_to_indexed_dict(row)
+    parsed: Dict[str, Any] = {
+        name: row_values.get(index)
+        for index, name in enumerate(SCAN_FIELD_NAMES, start=1)
+    }
     item_id = parsed.get("itemId") or parsed.get("id")
     item_link = parsed.get("link")
     buyout_price = parsed.get("buyoutPrice")
@@ -361,7 +370,40 @@ def parse_scan_row(
     )
 
 
-def extract_auctioneer_scan_data(parsed_inputs: Sequence[Tuple[Path, LuaValue]], logger: logging.Logger) -> List[AuctioneerScanRow]:
+def extract_auctioneer_scan_rows(
+    server_key: str,
+    server_data: Any,
+    logger: logging.Logger,
+) -> List[AuctioneerScanRow]:
+    scan_rows: List[AuctioneerScanRow] = []
+    if not isinstance(server_data, dict):
+        return scan_rows
+    logger.debug("Found scan serverKey=%s", server_key)
+    image = server_data.get("image")
+    ropes = server_data.get("ropes")
+    rope_id = None
+    scanstats = server_data.get("scanstats")
+    if isinstance(scanstats, dict):
+        rope_id = scanstats.get("ImageUpdated")
+    if isinstance(image, (list, dict)):
+        rows = list(image.values()) if isinstance(image, dict) else image
+        for row in rows:
+            if isinstance(row, (dict, list)):
+                scan_rows.append(
+                    parse_scan_row(row, server_key, None, rope_id)
+                )
+    if isinstance(ropes, list):
+        for rope in ropes:
+            logger.debug(
+                "Found raw rope entry length=%s",
+                len(str(rope)),
+            )
+    return scan_rows
+
+
+def extract_auctioneer_scan_data(
+    parsed_inputs: Sequence[Tuple[Path, LuaValue]], logger: logging.Logger
+) -> List[AuctioneerScanRow]:
     scan_rows: List[AuctioneerScanRow] = []
     for path, parsed in parsed_inputs:
         logger.info("Scanning Auctioneer input: %s", path)
@@ -369,44 +411,38 @@ def extract_auctioneer_scan_data(parsed_inputs: Sequence[Tuple[Path, LuaValue]],
             scans = parsed.get("scans")
             if isinstance(scans, dict):
                 for server_key, server_data in scans.items():
-                    if not isinstance(server_data, dict):
-                        continue
-                    logger.debug("Found scan serverKey=%s", server_key)
-                    image = server_data.get("image")
-                    ropes = server_data.get("ropes")
-                    rope_id = None
-                    if isinstance(server_data.get("scanstats"), dict):
-                        rope_id = server_data.get("scanstats").get("ImageUpdated")
-                    if isinstance(image, (list, dict)):
-                        if isinstance(image, dict):
-                            rows = [entry for entry in image.values()]
-                        else:
-                            rows = image
-                        for row in rows:
-                            if isinstance(row, (dict, list)):
-                                scan_rows.append(parse_scan_row(row, server_key, None, rope_id))
-                    if isinstance(ropes, list):
-                        for rope in ropes:
-                            logger.debug("Found raw rope entry length=%s", len(str(rope)))
+                    scan_rows.extend(
+                        extract_auctioneer_scan_rows(
+                            server_key, server_data, logger
+                        )
+                    )
         else:
-            logger.debug("Auctioneer input does not contain top-level scans table: %s", path)
+            logger.debug(
+                "Auctioneer input does not contain top-level scans table: %s",
+                path,
+            )
     logger.info("Extracted %d Auctioneer scan row candidates", len(scan_rows))
     return scan_rows
 
 
-def aggregate_scan_prices(rows: Sequence[AuctioneerScanRow], logger: logging.Logger) -> Dict[int, Dict[str, Any]]:
+def aggregate_scan_prices(
+    rows: Sequence[AuctioneerScanRow], logger: logging.Logger
+) -> Dict[int, Dict[str, Any]]:
     aggregated: Dict[int, Dict[str, Any]] = {}
     for row in rows:
         if row.item_id is None:
             continue
         item_id = int(row.item_id)
-        item_data = aggregated.setdefault(item_id, {
-            "buyouts": [],
-            "bids": [],
-            "quantities": [],
-            "links": set(),
-            "rows": [],
-        })
+        item_data = aggregated.setdefault(
+            item_id,
+            {
+                "buyouts": [],
+                "bids": [],
+                "quantities": [],
+                "links": set(),
+                "rows": [],
+            },
+        )
         if row.buyout_price is not None:
             item_data["buyouts"].append(row.buyout_price)
         if row.bid_price is not None:
@@ -428,7 +464,9 @@ def aggregate_scan_prices(rows: Sequence[AuctioneerScanRow], logger: logging.Log
     return aggregated
 
 
-def load_exclude_list(path: Optional[Path], logger: logging.Logger) -> set[int]:
+def load_exclude_list(
+    path: Optional[Path], logger: logging.Logger
+) -> set[int]:
     excluded = set()
     if not path:
         return excluded
@@ -448,7 +486,9 @@ def load_exclude_list(path: Optional[Path], logger: logging.Logger) -> set[int]:
     return excluded
 
 
-def compute_statistics(values: Sequence[Union[int, float]]) -> Tuple[Optional[float], Optional[float], Optional[float]]:
+def compute_statistics(
+    values: Sequence[Union[int, float]],
+) -> Tuple[Optional[float], Optional[float], Optional[float]]:
     if not values:
         return None, None, None
     values = [float(v) for v in values if v is not None]
@@ -457,7 +497,9 @@ def compute_statistics(values: Sequence[Union[int, float]]) -> Tuple[Optional[fl
     avg = sum(values) / len(values)
     sorted_values = sorted(values)
     q1 = sorted_values[max(0, int(len(sorted_values) * 0.25) - 1)]
-    q3 = sorted_values[min(len(sorted_values) - 1, int(len(sorted_values) * 0.75) - 1)]
+    q3 = sorted_values[
+        min(len(sorted_values) - 1, int(len(sorted_values) * 0.75) - 1)
+    ]
     return avg, q1, q3
 
 
@@ -477,6 +519,72 @@ def estimate_recommendation_score(
     return ratio * float(count)
 
 
+def get_market_summary(
+    market_data: Optional[Dict[str, Any]],
+) -> Tuple[
+    Optional[int],
+    Optional[int],
+    Optional[float],
+    Optional[float],
+    Optional[float],
+    List[str],
+]:
+    best_buyout = None
+    best_bid = None
+    average_market = None
+    q1_price = None
+    q3_price = None
+    notes: List[str] = []
+
+    if not market_data:
+        notes.append("no auctioneer scan data matched")
+        return (
+            best_buyout,
+            best_bid,
+            average_market,
+            q1_price,
+            q3_price,
+            notes,
+        )
+
+    avg_buyout, q1_buyout, q3_buyout = compute_statistics(
+        market_data.get("buyouts", [])
+    )
+    avg_bid, q1_bid, q3_bid = compute_statistics(
+        market_data.get("bids", [])
+    )
+    best_buyout = (
+        int(min(market_data.get("buyouts", [])))
+        if market_data.get("buyouts")
+        else None
+    )
+    best_bid = (
+        int(min(market_data.get("bids", [])))
+        if market_data.get("bids")
+        else None
+    )
+    average_market = avg_buyout or avg_bid
+    q1_price = q1_buyout or q1_bid
+    q3_price = q3_buyout or q3_bid
+    notes.append("scan data matched")
+
+    if average_market is None and best_buyout is not None:
+        average_market = float(best_buyout)
+    if q1_price is None and average_market is not None:
+        q1_price = average_market * 0.90
+    if q3_price is None and average_market is not None:
+        q3_price = average_market * 1.10
+
+    return (
+        best_buyout,
+        best_bid,
+        average_market,
+        q1_price,
+        q3_price,
+        notes,
+    )
+
+
 def build_recommendations(
     items: Sequence[AltoItemRecord],
     scan_aggregates: Dict[int, Dict[str, Any]],
@@ -486,36 +594,20 @@ def build_recommendations(
     recommendations: List[RecommendationRow] = []
     for item in items:
         excluded = item.item_id in excluded_ids if item.item_id is not None else False
-        market_data = None
-        if item.item_id is not None:
-            market_data = scan_aggregates.get(item.item_id)
-        best_buyout = None
-        best_bid = None
-        average_market = None
-        q1_price = None
-        q3_price = None
-        notes: List[str] = []
+        market_data = scan_aggregates.get(item.item_id) if item.item_id is not None else None
 
-        if market_data:
-            avg_buyout, q1_buyout, q3_buyout = compute_statistics(market_data.get("buyouts", []))
-            avg_bid, q1_bid, q3_bid = compute_statistics(market_data.get("bids", []))
-            best_buyout = int(min(market_data.get("buyouts", []))) if market_data.get("buyouts") else None
-            best_bid = int(min(market_data.get("bids", []))) if market_data.get("bids") else None
-            average_market = avg_buyout or avg_bid
-            q1_price = q1_buyout or q1_bid
-            q3_price = q3_buyout or q3_bid
-            notes.append("scan data matched")
-        else:
-            notes.append("no auctioneer scan data matched")
+        (
+            best_buyout,
+            best_bid,
+            average_market,
+            q1_price,
+            q3_price,
+            notes,
+        ) = get_market_summary(market_data)
 
-        if average_market is None and best_buyout is not None:
-            average_market = float(best_buyout)
-        if q1_price is None and average_market is not None:
-            q1_price = average_market * 0.90
-        if q3_price is None and average_market is not None:
-            q3_price = average_market * 1.10
-
-        score = estimate_recommendation_score(average_market, q1_price, best_buyout, item.count)
+        score = estimate_recommendation_score(
+            average_market, q1_price, best_buyout, item.count
+        )
 
         recommendations.append(
             RecommendationRow(
@@ -545,7 +637,9 @@ def build_recommendations(
     return recommendations
 
 
-def write_csv(path: Path, rows: Sequence[RecommendationRow], logger: logging.Logger) -> None:
+def write_csv(
+    path: Path, rows: Sequence[RecommendationRow], logger: logging.Logger
+) -> None:
     logger.info("Writing CSV output: %s", path)
     with path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.writer(handle)
@@ -575,10 +669,26 @@ def write_csv(path: Path, rows: Sequence[RecommendationRow], logger: logging.Log
                     row.count,
                     row.best_buyout,
                     row.best_bid,
-                    f"{row.average_market:.2f}" if row.average_market is not None else None,
-                    f"{row.q1_price:.2f}" if row.q1_price is not None else None,
-                    f"{row.q3_price:.2f}" if row.q3_price is not None else None,
-                    f"{row.recommendation_score:.4f}" if row.recommendation_score is not None else None,
+                    (
+                        f"{row.average_market:.2f}"
+                        if row.average_market is not None
+                        else None
+                    ),
+                    (
+                        f"{row.q1_price:.2f}"
+                        if row.q1_price is not None
+                        else None
+                    ),
+                    (
+                        f"{row.q3_price:.2f}"
+                        if row.q3_price is not None
+                        else None
+                    ),
+                    (
+                        f"{row.recommendation_score:.4f}"
+                        if row.recommendation_score is not None
+                        else None
+                    ),
                     row.excluded,
                     row.source_context,
                     row.notes,
@@ -587,7 +697,9 @@ def write_csv(path: Path, rows: Sequence[RecommendationRow], logger: logging.Log
     logger.info("CSV output complete (%d rows)", len(rows))
 
 
-def resolve_input_paths(input_paths: Sequence[str], logger: logging.Logger) -> List[Path]:
+def resolve_input_paths(
+    input_paths: Sequence[str], logger: logging.Logger
+) -> List[Path]:
     paths: List[Path] = []
     for text in input_paths:
         path = Path(text).expanduser().resolve()
@@ -598,7 +710,7 @@ def resolve_input_paths(input_paths: Sequence[str], logger: logging.Logger) -> L
     return paths
 
 
-def find_savedvariables_dir(root: Path, logger: logging.Logger) -> Optional[Path]:
+def find_savedvariables_dir(root: Path) -> Optional[Path]:
     if root.name == "SavedVariables":
         return root if root.exists() else None
     if root.name == "Account":
@@ -615,28 +727,31 @@ def find_savedvariables_dir(root: Path, logger: logging.Logger) -> Optional[Path
     return None
 
 
-def find_savedvariables_dirs(wow_root: Optional[Path], account: Optional[str], logger: logging.Logger) -> List[Path]:
+def candidate_savedvariables_dirs(root: Path) -> List[Path]:
+    resolved = root.expanduser().resolve() if root.exists() else root.expanduser()
+    candidates: List[Path] = []
+    for candidate in (
+        resolved,
+        resolved / "WTF" / "Account",
+        resolved / "Account",
+        resolved / "WTF",
+    ):
+        savedvars_dir = find_savedvariables_dir(candidate)
+        if savedvars_dir and savedvars_dir.exists():
+            candidates.append(savedvars_dir)
+    return candidates
+
+
+def find_savedvariables_dirs(
+    wow_root: Optional[Path], account: Optional[str], logger: logging.Logger
+) -> List[Path]:
     candidates: List[Path] = []
     roots = [wow_root] if wow_root else DEFAULT_WOW_SAVEDVARS_ROOTS
     for root in roots:
         if root is None:
             continue
-        resolved = root.expanduser().resolve() if root.exists() else root.expanduser()
-        savedvars_dir = find_savedvariables_dir(resolved, logger)
-        if savedvars_dir and savedvars_dir.exists():
-            candidates.append(savedvars_dir)
-            continue
-        if resolved.exists():
-            for alt in [resolved / "WTF" / "Account", resolved / "Account", resolved / "WTF"]:
-                if alt.exists():
-                    savedvars_dir = find_savedvariables_dir(alt, logger)
-                    if savedvars_dir:
-                        candidates.append(savedvars_dir)
-                        break
-    unique_dirs: List[Path] = []
-    for candidate in candidates:
-        if candidate not in unique_dirs:
-            unique_dirs.append(candidate)
+        candidates.extend(candidate_savedvariables_dirs(root))
+    unique_dirs = list(dict.fromkeys(candidates))
     if account:
         filtered: List[Path] = []
         for candidate in unique_dirs:
@@ -645,7 +760,9 @@ def find_savedvariables_dirs(wow_root: Optional[Path], account: Optional[str], l
                 filtered.append(account_dir)
         if filtered:
             return filtered
-        logger.warning("No SavedVariables account directory found for '%s'", account)
+        logger.warning(
+            "No SavedVariables account directory found for '%s'", account
+        )
     return unique_dirs
 
 
@@ -663,23 +780,34 @@ def resolve_savedvariable_files(
             if candidate.exists():
                 resolved_files.append(candidate)
             else:
-                logger.debug("Candidate SavedVariables file missing: %s", candidate)
+                logger.debug(
+                    "Candidate SavedVariables file missing: %s", candidate
+                )
     return resolved_files
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build Altoholic/Auctioneer sell recommendations from saved Lua data."
+        description=(
+            "Build Altoholic/Auctioneer sell recommendations from saved "
+            "Lua data."
+        )
     )
     parser.add_argument(
         "--altoholic",
         nargs="*",
-        help="Path to Altoholic DataStore saved-variable file(s) or directory(ies).",
+        help=(
+            "Path to Altoholic DataStore saved-variable file(s) or "
+            "directory(ies)."
+        ),
     )
     parser.add_argument(
         "--auctioneer",
         nargs="*",
-        help="Path to Auctioneer AucScanData saved-variable file(s) or directory(ies).",
+        help=(
+            "Path to Auctioneer AucScanData saved-variable file(s) or "
+            "directory(ies)."
+        ),
     )
     parser.add_argument(
         "--wow-root",
@@ -730,7 +858,9 @@ def main() -> int:
             logger,
         )
         if altoholic_paths:
-            logger.info("Resolved Altoholic SavedVariables: %s", altoholic_paths)
+            logger.info(
+                "Resolved Altoholic SavedVariables: %s", altoholic_paths
+            )
 
     if args.auctioneer:
         auctioneer_paths = resolve_input_paths(args.auctioneer, logger)
@@ -742,7 +872,9 @@ def main() -> int:
             logger,
         )
         if auctioneer_paths:
-            logger.info("Resolved Auctioneer SavedVariables: %s", auctioneer_paths)
+            logger.info(
+                "Resolved Auctioneer SavedVariables: %s", auctioneer_paths
+            )
 
     if not altoholic_paths:
         logger.error("No Altoholic input files were found or provided.")
@@ -751,7 +883,11 @@ def main() -> int:
         logger.error("No Auctioneer input files were found or provided.")
         return 2
 
-    excluded_ids = load_exclude_list(Path(args.exclude_file), logger) if args.exclude_file else set()
+    excluded_ids = (
+        load_exclude_list(Path(args.exclude_file), logger)
+        if args.exclude_file
+        else set()
+    )
 
     altoholic_inputs = load_lua_inputs(altoholic_paths, logger)
     auctioneer_inputs = load_lua_inputs(auctioneer_paths, logger)
@@ -760,7 +896,9 @@ def main() -> int:
     scan_rows = extract_auctioneer_scan_data(auctioneer_inputs, logger)
     scan_aggregates = aggregate_scan_prices(scan_rows, logger)
 
-    recommendations = build_recommendations(alto_items, scan_aggregates, excluded_ids, logger)
+    recommendations = build_recommendations(
+        alto_items, scan_aggregates, excluded_ids, logger
+    )
     write_csv(Path(args.output), recommendations, logger)
 
     logger.info("Sell recommendation script finished")
