@@ -133,16 +133,58 @@ These repos are smaller Auctioneer modules, usually one or a few Lua source file
   - `auc-stat-stddev`
   - `auc-stat-wowecon`
 
-## Scan-related Lua files
+## Recommended module set for scan/stat analysis
 
-These Lua files include the word `scan` and are likely the most relevant to Auctioneer scanning and rope generation.
+For this project, the most important repositories are the scan core and stat modules. The following subset is enough to understand the Auctioneer scan/stat workflow:
 
-- `Documentation/References/CoreScan.lua`
-- `Documentation/References/auc-advanced/CoreAPI.lua`
-- `Documentation/References/auc-advanced/CoreBuy.lua`
-- `Documentation/References/auc-advanced/CoreConfig.lua`
-- `Documentation/References/auc-advanced/CoreConst.lua`
-- `Documentation/References/auc-advanced/CoreFinal.lua`
+### Necessary modules
+
+- `auc-advanced`
+- `auc-scandata`
+- `auc-db`
+- `auc-filter-basic`
+- `auc-filter-flatoutlier`
+- `auc-filter-outlier`
+- `auc-match-undercut`
+- `auc-stat-debug`
+- `auc-stat-histogram`
+- `auc-stat-ilevel`
+- `auc-stat-now`
+- `auc-stat-purchased`
+- `auc-stat-sales`
+- `auc-stat-simple`
+- `auc-stat-stddev`
+- `auc-stat-wowecon`
+
+### Optional extra modules
+
+These additional repos are useful for broader Auctioneer integration, but are not required for the core scan/stat analysis:
+
+- `auctioneer`
+- `auc-util-searchui`
+- `auc-util-scanbutton`
+- `auc-util-scanstart`
+- `auc-util-scanprogress`
+- `auc-util-scanfinish`
+- `auc-util-simpleauction`
+- `auc-util-compactui`
+- `auc-util-itemsuggest`
+- `auc-util-easybuyout`
+- `auc-util-pricelevel`
+- `auc-util-vendmarkup`
+- `auc-util-fixah`
+- `auc-util-automagic`
+- `auc-util-appraiser`
+- `auc-util-glypher`
+- `auc-util-glypherpost`
+- `auctioneer_stats_overtime`
+- `auctioneer_util_valuer`
+- `auctioneer_util_dealfinder`
+- `enchantrix`
+- `enchantrix-barker`
+- `beancounter`
+- `informant`
+
 - `Documentation/References/auc-advanced/CoreMain.lua`
 - `Documentation/References/auc-advanced/CoreManifest.lua`
 - `Documentation/References/auc-advanced/CoreModule.lua`
