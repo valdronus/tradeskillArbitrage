@@ -219,3 +219,8 @@ __marimo__/
 # Local junk and backup directories
 backup/
 junk/
+# Generated mock data and scan artifacts
+AuctionAnalysis/MockAuctionHouseTesting/data/
+AuctionAnalysis/MockAuctionHouseTesting/auction_scan_diff.csv
+AuctionAnalysis/MockAuctionHouseTesting/auction_scan_diff.txt
+AuctionAnalysis/MockAuctionHouseTesting/sales.db
