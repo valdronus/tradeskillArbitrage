@@ -7,8 +7,8 @@ cd /workspaces/codespaces-blank
 env -u GITHUB_TOKEN gh auth login --hostname github.com --web
 gh auth setup-git --hostname github.com
 git remote set-url origin https://github.com/valdronus/tradeskillArbitrage.git
-git add Documentation/AuctioneerInfo.md Documentation/AuctioneerStatisticMethods.md Documentation/NewStatModulePlan.md Documentation/GitHubSetup.md
-git commit -m 'Add Auctioneer documentation and setup guide'
+git add ...files...
+git commit -m '...'
 git push origin main
 ```
 
@@ -33,17 +33,11 @@ cd /workspaces/codespaces-blank
 git init
 ```
 
-Move your markdown file into the Documentation folder:
-
-```bash
-mv AuctioneerInfo.md Documentation/AuctioneerInfo.md
-```
-
 Add files and commit them:
 
 ```bash
-git add Documentation/AuctioneerInfo.md auctioneer_rope_to_sqlite.py
-git commit -m 'Add Auctioneer parser and reference documentation'
+git add ...files...
+git commit -m '...'
 ```
 
 ## 2. Configure the repository remote

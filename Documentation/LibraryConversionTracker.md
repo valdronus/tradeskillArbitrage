@@ -1,0 +1,64 @@
+This file tracks migration progress for primary Python scripts as they are converted to use shared utilities in `script_helpers.py`. After this description it is ONLY a checklist to track the progress.
+
+Backups of all files before conversion exist in the `backup` folder.
+
+- [x] AuctionScanDiff.py
+  - [x] debugLog1 -> debug_log
+  - [x] debugLog2 -> debug_log
+  - [x] debugLog3 -> debug_log
+  - [x] format_money -> format_money
+  - [x] get_table_columns -> get_table_columns
+  - [x] row_to_mapping -> row_to_mapping
+  - [x] write_csv -> write_csv
+  - [x] write_json -> write_json
+- [ ] altoholic_auctioneer_sell_recommend.py
+  - [ ] parse_args -> make_arg_parser
+  - [ ] setup_logger -> make_logger
+  - [ ] parse_item_link -> parse_item_link
+  - [ ] write_csv -> write_csv
+- [ ] analyze_auctioneer_db.py
+  - [ ] parse_args -> make_arg_parser
+  - [ ] quote_ident -> quote_ident
+  - [ ] get_tables -> get_tables
+  - [ ] get_table_columns -> get_table_columns
+  - [ ] get_table_schema -> get_table_schema
+  - [ ] format_table_schema -> format_table_schema
+  - [ ] load_table_schema -> load_table_schema
+  - [ ] load_database_schema -> load_database_schema
+- [ ] analyze_sales_db.py
+  - [ ] format_money -> format_money
+- [ ] auctioneer_rope_to_sqlite.py
+  - [ ] parse_args -> make_arg_parser
+  - [ ] debugLog1 -> debug_log
+  - [ ] debugLog2 -> debug_log
+  - [ ] debugLog3 -> debug_log
+  - [ ] quote_ident -> quote_ident
+  - [ ] default_input_path -> default_input_path
+  - [ ] parse_lua -> parse_lua
+- [ ] extract_altoholic_inventory_json.py
+  - [ ] parse_args -> make_arg_parser
+  - [ ] setup_logger -> make_logger
+  - [ ] parse_item_link -> parse_item_link
+  - [ ] parse_lua -> parse_lua
+  - [ ] _serialize_dataclasses -> serialize_structured_data
+- [ ] extract_item_market_data.py
+  - [ ] debugLog1 -> debug_log
+  - [ ] debugLog2 -> debug_log
+  - [ ] debugLog3 -> debug_log
+  - [ ] default_input_path -> default_input_path
+  - [ ] parse_lua -> parse_lua
+- [ ] extract_tradeskillinfo_recipes.py
+  - [ ] setup_logger -> make_logger
+  - [ ] write_json -> write_json
+- [ ] inspect_sellers.py
+  - [ ] SCAN_FIELD_POSITIONS -> SCAN_FIELD_POSITIONS
+  - [ ] row_to_mapping -> row_to_mapping
+- [ ] scan_lua_timestamps.py
+  - [ ] parse_args -> make_arg_parser
+  - [ ] default_input_path -> default_input_path
+- [ ] trace_item_sales.py
+  - [ ] parse_args -> make_arg_parser
+  - [ ] quote_ident -> quote_ident
+  - [ ] get_tables -> get_tables
+  - [ ] row_to_mapping -> row_to_mapping
+  - [ ] write_json_output -> write_json_output
